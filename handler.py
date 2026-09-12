@@ -175,7 +175,7 @@ def handler(event):
             generate_segments(normalized, silent, job)
             mux_audio(silent, normalized, generated, job.preserve_audio, normalized_metadata["has_audio"])
             output_metadata = validate_output(generated, normalized_metadata["duration"])
-           url = runpod.serverless.utils.rp_upload.upload_file_to_bucket(generated.name, str(generated))
+            url = runpod.serverless.utils.rp_upload.upload_file_to_bucket(generated.name, str(generated))
             return {"status": "completed", "video_url": url, "input": input_metadata, "output": output_metadata, "model": MODEL_ID}
     except ValidationError as error:
         return {"status": "failed", "code": "invalid_input", "error": error.errors(include_url=False)}
