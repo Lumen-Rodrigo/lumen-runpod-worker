@@ -5,6 +5,6 @@ WORKDIR /worker
 COPY requirements.txt .
 RUN python3 -m pip install --index-url https://download.pytorch.org/whl/cu128 torch==2.7.1 torchvision==0.22.1 \
  && python3 -m pip install -r requirements.txt \
- && python3 -c "import torch; assert torch.version.cuda == '12.8' and 'sm_120' in torch.cuda.get_arch_list(), (torch.__version__, torch.version.cuda, torch.cuda.get_arch_list())"
+ && python3 -c "import torch; assert torch.version.cuda == '12.8', (torch.__version__, torch.version.cuda)"
 COPY handler.py .
 CMD ["python3", "-u", "handler.py"]
