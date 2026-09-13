@@ -23,6 +23,7 @@ _PIPELINE, _PIPELINE_LOCK = None, Lock()
 
 class JobInput(BaseModel):
     video_url: HttpUrl
+    output_url: HttpUrl
     prompt: str = Field(min_length=3, max_length=1200)
     style: str = "realistic"
     preserve_audio: bool = True
@@ -175,8 +176,17 @@ def handler(event):
             generate_segments(normalized, silent, job)
             mux_audio(silent, normalized, generated, job.preserve_audio, normalized_metadata["has_audio"])
             output_metadata = validate_output(generated, normalized_metadata["duration"])
-            url = runpod.serverless.utils.rp_upload.upload_file_to_bucket(generated.name, str(generated))
-            return {"status": "completed", "video_url": url, "input": input_metadata, "output": output_metadata, "model": MODEL_ID}
+            target = urlparse(str(job.output_url))
+            if target.scheme != "https" or target.hostname != "lumen-estudio-cine.rahp.chatgpt.site" or target.path != "/api/media" or not target.query:
+                raise ValueError("output_url must be the signed Lumen media endpoint")
+            with generated.open("rb") as video_file:
+                response = requests.put(
+                    str(job.output_url), data=video_file,
+                    headers={"Content-Type": "video/mp4", "Content-Length": str(generated.stat().st_size)},
+                    timeout=(15, 300), allow_redirects=False,
+                )
+            response.raise_for_status()
+            return {"status": "completed", "video_url": "stored", "input": input_metadata, "output": output_metadata, "model": MODEL_ID}
     except ValidationError as error:
         return {"status": "failed", "code": "invalid_input", "error": error.errors(include_url=False)}
     except subprocess.CalledProcessError as error:
@@ -187,3 +197,4 @@ def handler(event):
 
 if __name__ == "__main__":
     runpod.serverless.start({"handler": handler})
+
